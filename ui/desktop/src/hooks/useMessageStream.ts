@@ -1,7 +1,13 @@
 import { useState, useCallback, useEffect, useRef, useId } from 'react';
 import useSWR from 'swr';
 import { getSecretKey } from '../config';
-import { Message, createUserMessage, hasCompletedToolCalls } from '../types/message';
+import { Message, createUserMessage, hasCompletedToolCalls, MessageContent } from '../types/message';
+import { 
+  createNewVersion, 
+  switchVersion, 
+  computeActiveVersionPath, 
+  hideDownstreamMessages 
+} from '../utils/messageVersionUtils';
 
 // Ensure TextDecoder is available in the global scope
 const TextDecoder = globalThis.TextDecoder;
@@ -144,6 +150,15 @@ export interface UseMessageStreamHelpers {
   
   /** Current model info from the backend */
   currentModelInfo: { model: string; mode: string } | null;
+
+  /** Edit a message and create a new version */
+  editMessage: (messageId: string, newContent: MessageContent[]) => Promise<void>;
+
+  /** Switch to a different version of a message */
+  switchMessageVersion: (messageId: string, versionIndex: number) => void;
+
+  /** Get the active version path for filtering messages */
+  activeVersionPath: string[];
 }
 
 /**
@@ -173,6 +188,7 @@ export function useMessageStream({
 
   const [notifications, setNotifications] = useState<NotificationEvent[]>([]);
   const [currentModelInfo, setCurrentModelInfo] = useState<{ model: string; mode: string } | null>(null);
+  const [activeVersionPath, setActiveVersionPath] = useState<string[]>([]);
 
   // expose a way to update the body so we can update the session id when CLE occurs
   const updateMessageStreamBody = useCallback((newBody: object) => {
@@ -543,6 +559,80 @@ export function useMessageStream({
     [mutate, maxSteps, sendRequest]
   );
 
+  // Edit a message and create a new version
+  const editMessage = useCallback(
+    async (messageId: string, newContent: MessageContent[]) => {
+      const currentMessages = messagesRef.current;
+      const messageIndex = currentMessages.findIndex(msg => msg.id === messageId);
+      
+      if (messageIndex === -1) {
+        console.error('Message not found for editing:', messageId);
+        return;
+      }
+
+      const messageToEdit = currentMessages[messageIndex];
+      
+      // Create new version of the message
+      const updatedMessage = createNewVersion(messageToEdit, newContent);
+      
+      // Hide downstream messages
+      const messagesWithHiddenDownstream = hideDownstreamMessages(messageId, currentMessages);
+      
+      // Update the message in the array
+      const updatedMessages = messagesWithHiddenDownstream.map((msg, index) => 
+        index === messageIndex ? updatedMessage : msg
+      );
+      
+      // Update state
+      setMessages(updatedMessages);
+      
+      // Update active version path
+      const newActivePath = computeActiveVersionPath(updatedMessages);
+      setActiveVersionPath(newActivePath);
+      
+      // Trigger new AI response by sending the updated messages
+      await sendRequest(updatedMessages);
+    },
+    [sendRequest, setMessages]
+  );
+
+  // Switch to a different version of a message
+  const switchMessageVersion = useCallback(
+    (messageId: string, versionIndex: number) => {
+      const currentMessages = messagesRef.current;
+      const messageIndex = currentMessages.findIndex(msg => msg.id === messageId);
+      
+      if (messageIndex === -1) {
+        console.error('Message not found for version switching:', messageId);
+        return;
+      }
+
+      const messageToSwitch = currentMessages[messageIndex];
+      const updatedMessage = switchVersion(messageToSwitch, versionIndex);
+      
+      // Update the message in the array
+      const updatedMessages = currentMessages.map((msg, index) => 
+        index === messageIndex ? updatedMessage : msg
+      );
+      
+      // Update state
+      setMessages(updatedMessages);
+      
+      // Update active version path
+      const newActivePath = computeActiveVersionPath(updatedMessages);
+      setActiveVersionPath(newActivePath);
+    },
+    [setMessages]
+  );
+
+  // Update active version path when messages change
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      const newActivePath = computeActiveVersionPath(messages);
+      setActiveVersionPath(newActivePath);
+    }
+  }, [messages]);
+
   return {
     messages: messages || [],
     error,
@@ -559,5 +649,8 @@ export function useMessageStream({
     updateMessageStreamBody,
     notifications,
     currentModelInfo,
+    editMessage,
+    switchMessageVersion,
+    activeVersionPath,
   };
 }
