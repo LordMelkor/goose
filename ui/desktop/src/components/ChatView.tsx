@@ -484,9 +484,15 @@ function ChatContent({
 
   // Filter out standalone tool response messages for rendering
   // They will be shown as part of the tool invocation in the assistant message
+  // Also filter based on active version path when versions are present
   const filteredMessages = [...ancestorMessages, ...messages].filter((message) => {
     // Only filter out when display is explicitly false
     if (message.display === false) return false;
+
+    // Filter by active version path if we have versions
+    if (activeVersionPath.length > 0 && message.id && !activeVersionPath.includes(message.id)) {
+      return false;
+    }
 
     // Keep all assistant messages and user messages that aren't just tool responses
     if (message.role === 'assistant') return true;
