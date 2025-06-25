@@ -83,6 +83,13 @@ export interface SummarizationRequestedContent {
   msg: string;
 }
 
+export interface MessageVersion {
+  versionNumber: number;
+  content: MessageContent[];
+  timestamp: number;
+  childMessageIds: string[];
+}
+
 export type MessageContent =
   | TextContent
   | ImageContent
@@ -99,6 +106,9 @@ export interface Message {
   content: MessageContent[];
   display?: boolean;
   sendToLLM?: boolean;
+  versions?: MessageVersion[];
+  currentVersionIndex?: number;
+  parentMessageId?: string;
 }
 
 // Helper functions to create messages
