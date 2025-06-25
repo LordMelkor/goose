@@ -175,7 +175,7 @@ export default function GooseMessage({
             {hasMultipleVersions(message) && (
               <div className="flex justify-start mt-1">
                 <VersionNavigator
-                  currentVersion={(message.currentVersionIndex || 0) + 1}
+                  currentVersion={(message.currentVersionIndex ?? 0) + 1}
                   totalVersions={message.versions?.length || 1}
                   onVersionChange={handleVersionChange}
                   className="text-xs"

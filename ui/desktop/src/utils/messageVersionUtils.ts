@@ -35,20 +35,30 @@ import { Message, MessageVersion, MessageContent } from '../types/message';
  * and adds the new content as the latest version. The message's currentVersionIndex
  * is updated to point to the new version.
  * 
+ * When creating a new version, we also need to track which downstream messages
+ * belong to the previous version so we can show/hide them appropriately.
+ * 
  * @param message - The original message to create a version from
  * @param newContent - The new content for the message
+ * @param downstreamMessageIds - IDs of messages that should be associated with the previous version
  * @returns Updated message with new version added and currentVersionIndex set to latest
  * 
  * @example
  * ```typescript
  * const originalMessage = { id: '1', content: [{ type: 'text', text: 'Hello' }] };
  * const newContent = [{ type: 'text', text: 'Hello World' }];
- * const updatedMessage = createNewVersion(originalMessage, newContent);
+ * const downstreamIds = ['msg2', 'msg3']; // Messages that were responses to original
+ * const updatedMessage = createNewVersion(originalMessage, newContent, downstreamIds);
  * // updatedMessage.versions.length === 2
  * // updatedMessage.currentVersionIndex === 1
+ * // updatedMessage.versions[0].childMessageIds === ['msg2', 'msg3']
  * ```
  */
-export function createNewVersion(message: Message, newContent: MessageContent[]): Message {
+export function createNewVersion(
+  message: Message, 
+  newContent: MessageContent[], 
+  downstreamMessageIds: string[] = []
+): Message {
   const currentContent = message.content;
   const currentTimestamp = message.created;
   
@@ -57,7 +67,7 @@ export function createNewVersion(message: Message, newContent: MessageContent[])
     versionNumber: 1,
     content: currentContent,
     timestamp: currentTimestamp,
-    childMessageIds: [], // Will be populated when we track child relationships
+    childMessageIds: downstreamMessageIds, // Track which messages belong to this version
   };
 
   // Create the new version
@@ -65,7 +75,7 @@ export function createNewVersion(message: Message, newContent: MessageContent[])
     versionNumber: (message.versions?.length || 0) + 2, // +2 because we're adding the original as version 1
     content: newContent,
     timestamp: Math.floor(Date.now() / 1000),
-    childMessageIds: [],
+    childMessageIds: [], // New version starts with no children
   };
 
   // Update the message
@@ -117,13 +127,16 @@ export function switchVersion(message: Message, versionIndex: number): Message {
  * Computes the active version path for a conversation
  * 
  * This function determines which messages should be visible based on the current
- * version selections. It filters out messages with display=false and returns
- * an array of message IDs that represent the active conversation branch.
+ * version selections. It needs to track which conversation branches correspond
+ * to each version of edited messages.
  * 
- * In the future, this will be enhanced to handle complex version branching
- * and parent-child relationships between messages.
+ * For now, this is a simplified implementation that shows all messages unless
+ * they have display=false. A more sophisticated implementation would track
+ * parent-child relationships and version-specific conversation branches.
  * 
  * @param messages - Array of all messages in the conversation
+ * @param editedMessageId - Optional ID of message that was just edited
+ * @param selectedVersionIndex - Optional version index that was selected
  * @returns Array of message IDs that should be visible in the current version path
  * 
  * @example
@@ -133,11 +146,46 @@ export function switchVersion(message: Message, versionIndex: number): Message {
  * // activePath = ['msg1', 'msg2', 'msg3'] (if all visible)
  * ```
  */
-export function computeActiveVersionPath(messages: Message[]): string[] {
+export function computeActiveVersionPath(
+  messages: Message[], 
+  editedMessageId?: string, 
+  selectedVersionIndex?: number
+): string[] {
   const activePath: string[] = [];
   
-  // For now, we'll include all messages that don't have display=false
-  // This will be enhanced as we implement the full branching logic
+  // If we have an edited message, we need to handle version-specific branching
+  if (editedMessageId && selectedVersionIndex !== undefined) {
+    const editedMessageIndex = messages.findIndex(msg => msg.id === editedMessageId);
+    
+    if (editedMessageIndex !== -1) {
+      // Include all messages up to and including the edited message
+      for (let i = 0; i <= editedMessageIndex; i++) {
+        const message = messages[i];
+        if (message.display !== false && message.id) {
+          activePath.push(message.id);
+        }
+      }
+      
+      // For messages after the edited message, we need to determine which ones
+      // belong to the selected version's conversation branch
+      const editedMessage = messages[editedMessageIndex];
+      
+      if (editedMessage.versions && editedMessage.versions[selectedVersionIndex]) {
+        const selectedVersion = editedMessage.versions[selectedVersionIndex];
+        
+        // Include child messages that belong to this version
+        for (const childId of selectedVersion.childMessageIds) {
+          if (!activePath.includes(childId)) {
+            activePath.push(childId);
+          }
+        }
+      }
+      
+      return activePath;
+    }
+  }
+  
+  // Default behavior: include all messages that don't have display=false
   for (const message of messages) {
     if (message.display !== false && message.id) {
       activePath.push(message.id);
@@ -206,6 +254,52 @@ export function hideDownstreamMessages(
  */
 export function getVersionNavigatorText(currentVersion: number, totalVersions: number): string {
   return `< ${currentVersion} / ${totalVersions} >`;
+}
+
+/**
+ * Restores messages that were hidden for a specific version
+ * @param messageId - The ID of the message whose version is being switched
+ * @param versionIndex - The version index being switched to
+ * @param messages - Array of all messages in the conversation
+ * @returns Updated messages array with appropriate messages restored/hidden
+ */
+export function restoreMessagesForVersion(
+  messageId: string,
+  versionIndex: number,
+  messages: Message[]
+): Message[] {
+  const messageIndex = messages.findIndex(msg => msg.id === messageId);
+  if (messageIndex === -1) {
+    return messages;
+  }
+
+  const message = messages[messageIndex];
+  if (!message.versions || !message.versions[versionIndex]) {
+    return messages;
+  }
+
+  const selectedVersion = message.versions[versionIndex];
+  
+  return messages.map((msg, index) => {
+    // Don't modify messages before the edited message
+    if (index <= messageIndex) {
+      return msg;
+    }
+    
+    // For messages after the edited message, show them if they belong to this version
+    if (msg.id && selectedVersion.childMessageIds.includes(msg.id)) {
+      return {
+        ...msg,
+        display: true, // Make sure they're visible
+      };
+    } else {
+      // Hide messages that don't belong to this version
+      return {
+        ...msg,
+        display: false,
+      };
+    }
+  });
 }
 
 /**

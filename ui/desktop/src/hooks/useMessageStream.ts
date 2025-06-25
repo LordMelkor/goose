@@ -6,7 +6,8 @@ import {
   createNewVersion, 
   switchVersion, 
   computeActiveVersionPath, 
-  hideDownstreamMessages 
+  hideDownstreamMessages,
+  restoreMessagesForVersion
 } from '../utils/messageVersionUtils';
 
 // Ensure TextDecoder is available in the global scope
@@ -572,8 +573,14 @@ export function useMessageStream({
 
       const messageToEdit = currentMessages[messageIndex];
       
-      // Create new version of the message
-      const updatedMessage = createNewVersion(messageToEdit, newContent);
+      // Get downstream message IDs (messages that come after this one)
+      const downstreamMessageIds = currentMessages
+        .slice(messageIndex + 1)
+        .filter(msg => msg.id)
+        .map(msg => msg.id!);
+      
+      // Create new version of the message with downstream tracking
+      const updatedMessage = createNewVersion(messageToEdit, newContent, downstreamMessageIds);
       
       // Hide downstream messages
       const messagesWithHiddenDownstream = hideDownstreamMessages(messageId, currentMessages);
@@ -586,9 +593,13 @@ export function useMessageStream({
       // Update state
       setMessages(updatedMessages);
       
-      // Update active version path
-      const newActivePath = computeActiveVersionPath(updatedMessages);
+      // Update active version path for the new version
+      const newActivePath = computeActiveVersionPath(updatedMessages, messageId, updatedMessage.currentVersionIndex);
       setActiveVersionPath(newActivePath);
+      
+      console.log('Created new version for message:', messageId);
+      console.log('Downstream messages tracked:', downstreamMessageIds);
+      console.log('New active path:', newActivePath);
       
       // Trigger new AI response by sending the updated messages
       await sendRequest(updatedMessages);
@@ -610,17 +621,24 @@ export function useMessageStream({
       const messageToSwitch = currentMessages[messageIndex];
       const updatedMessage = switchVersion(messageToSwitch, versionIndex);
       
+      // Restore/hide messages based on the selected version
+      const messagesWithRestoredVersion = restoreMessagesForVersion(messageId, versionIndex, currentMessages);
+      
       // Update the message in the array
-      const updatedMessages = currentMessages.map((msg, index) => 
+      const updatedMessages = messagesWithRestoredVersion.map((msg, index) => 
         index === messageIndex ? updatedMessage : msg
       );
       
       // Update state
       setMessages(updatedMessages);
       
-      // Update active version path
-      const newActivePath = computeActiveVersionPath(updatedMessages);
+      // Update active version path with the specific message and version
+      const newActivePath = computeActiveVersionPath(updatedMessages, messageId, versionIndex);
       setActiveVersionPath(newActivePath);
+      
+      console.log('Switched to version:', versionIndex, 'for message:', messageId);
+      console.log('Updated message currentVersionIndex:', updatedMessage.currentVersionIndex);
+      console.log('New active path:', newActivePath);
     },
     [setMessages]
   );
