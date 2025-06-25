@@ -623,7 +623,7 @@ function ChatContent({
                             contextType={getContextHandlerType(message)}
                           />
                         ) : (
-                          <UserMessage message={message} />
+                          <UserMessage message={message} onEditMessage={editMessage} />
                         )}
                       </>
                     ) : (
