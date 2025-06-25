@@ -78,8 +78,19 @@ export default function UserMessage({ message, onEditMessage, onSwitchVersion }:
     } else if (e.key === 'Escape') {
       e.preventDefault();
       handleCancelEdit();
+    } else if (e.key === 'Tab') {
+      // Allow normal tab behavior for accessibility
+      return;
     }
   }, [handleSaveEdit, handleCancelEdit]);
+
+  // Handle edit button key events
+  const handleEditButtonKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleEditClick();
+    }
+  }, [handleEditClick]);
 
   return (
     <div className="flex justify-end mt-[16px] w-full opacity-0 animate-[appear_150ms_ease-in_forwards]">
@@ -95,17 +106,21 @@ export default function UserMessage({ message, onEditMessage, onSwitchVersion }:
                 className="bg-transparent text-white resize-none border-none outline-none min-h-[60px] font-inherit"
                 autoFocus
                 placeholder="Edit your message..."
+                aria-label="Edit message content"
+                rows={3}
               />
               <div className="flex gap-2 mt-2 pt-2 border-t border-slate-600">
                 <button
                   onClick={handleSaveEdit}
-                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors"
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  aria-label="Save edited message"
                 >
                   Save
                 </button>
                 <button
                   onClick={handleCancelEdit}
-                  className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors"
+                  className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  aria-label="Cancel editing"
                 >
                   Cancel
                 </button>
@@ -152,9 +167,11 @@ export default function UserMessage({ message, onEditMessage, onSwitchVersion }:
                   {onEditMessage && (
                     <button
                       onClick={handleEditClick}
-                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                      onKeyDown={handleEditButtonKeyDown}
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
                       aria-label="Edit message"
-                      title="Edit message"
+                      title="Edit message (Enter or Space to activate)"
+                      tabIndex={0}
                     >
                       <Edit className="w-4 h-4 text-textSubtle hover:text-textStandard" />
                     </button>
