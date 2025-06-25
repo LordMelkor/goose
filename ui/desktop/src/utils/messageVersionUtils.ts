@@ -72,7 +72,7 @@ export function createNewVersion(
 
   // Create the new version
   const newVersion: MessageVersion = {
-    versionNumber: (message.versions?.length || 0) + 2, // +2 because we're adding the original as version 1
+    versionNumber: (message.versions?.length || 0) + 1, // Fixed: +1 for sequential numbering
     content: newContent,
     timestamp: Math.floor(Date.now() / 1000),
     childMessageIds: [], // New version starts with no children
@@ -83,7 +83,7 @@ export function createNewVersion(
     ...message,
     content: newContent,
     versions: message.versions ? [...message.versions, newVersion] : [firstVersion, newVersion],
-    currentVersionIndex: message.versions ? message.versions.length + 1 : 1, // Index of the new version
+    currentVersionIndex: message.versions ? message.versions.length : 1, // Fixed: length gives us the new index
   };
 
   return updatedMessage;
@@ -111,16 +111,20 @@ export function createNewVersion(
  */
 export function switchVersion(message: Message, versionIndex: number): Message {
   if (!message.versions || versionIndex < 0 || versionIndex >= message.versions.length) {
+    console.warn('Invalid version index:', versionIndex, 'for message with', message.versions?.length || 0, 'versions');
     return message;
   }
 
   const targetVersion = message.versions[versionIndex];
   
-  return {
+  const updatedMessage = {
     ...message,
     content: targetVersion.content,
     currentVersionIndex: versionIndex,
   };
+  
+  console.log('Switched message to version:', versionIndex, 'content:', targetVersion.content);
+  return updatedMessage;
 }
 
 /**
@@ -158,30 +162,40 @@ export function computeActiveVersionPath(
     const editedMessageIndex = messages.findIndex(msg => msg.id === editedMessageId);
     
     if (editedMessageIndex !== -1) {
-      // Include all messages up to and including the edited message
-      for (let i = 0; i <= editedMessageIndex; i++) {
-        const message = messages[i];
-        if (message.display !== false && message.id) {
-          activePath.push(message.id);
-        }
-      }
-      
-      // For messages after the edited message, we need to determine which ones
-      // belong to the selected version's conversation branch
       const editedMessage = messages[editedMessageIndex];
       
-      if (editedMessage.versions && editedMessage.versions[selectedVersionIndex]) {
+      // Validate the version index
+      if (!editedMessage.versions || selectedVersionIndex < 0 || selectedVersionIndex >= editedMessage.versions.length) {
+        console.warn('Invalid version index for computeActiveVersionPath:', selectedVersionIndex, 'available versions:', editedMessage.versions?.length || 0);
+        // Fall back to default behavior
+      } else {
+        // Include all messages up to and including the edited message
+        for (let i = 0; i <= editedMessageIndex; i++) {
+          const message = messages[i];
+          if (message.display !== false && message.id) {
+            activePath.push(message.id);
+          }
+        }
+        
+        // For messages after the edited message, include those that belong to this version
         const selectedVersion = editedMessage.versions[selectedVersionIndex];
+        
+        console.log('Computing active path for version', selectedVersionIndex, 'with child messages:', selectedVersion.childMessageIds);
         
         // Include child messages that belong to this version
         for (const childId of selectedVersion.childMessageIds) {
           if (!activePath.includes(childId)) {
-            activePath.push(childId);
+            // Verify the message still exists and is visible
+            const childMessage = messages.find(m => m.id === childId);
+            if (childMessage && childMessage.display !== false) {
+              activePath.push(childId);
+            }
           }
         }
+        
+        console.log('Active path for version', selectedVersionIndex, ':', activePath);
+        return activePath;
       }
-      
-      return activePath;
     }
   }
   
@@ -192,6 +206,7 @@ export function computeActiveVersionPath(
     }
   }
   
+  console.log('Default active path:', activePath);
   return activePath;
 }
 
@@ -270,17 +285,20 @@ export function restoreMessagesForVersion(
 ): Message[] {
   const messageIndex = messages.findIndex(msg => msg.id === messageId);
   if (messageIndex === -1) {
+    console.warn('Message not found for restoreMessagesForVersion:', messageId);
     return messages;
   }
 
   const message = messages[messageIndex];
-  if (!message.versions || !message.versions[versionIndex]) {
+  if (!message.versions || versionIndex < 0 || versionIndex >= message.versions.length) {
+    console.warn('Invalid version index for restoreMessagesForVersion:', versionIndex, 'available versions:', message.versions?.length || 0);
     return messages;
   }
 
   const selectedVersion = message.versions[versionIndex];
+  console.log('Restoring messages for version', versionIndex, 'with child messages:', selectedVersion.childMessageIds);
   
-  return messages.map((msg, index) => {
+  const updatedMessages = messages.map((msg, index) => {
     // Don't modify messages before the edited message
     if (index <= messageIndex) {
       return msg;
@@ -288,18 +306,25 @@ export function restoreMessagesForVersion(
     
     // For messages after the edited message, show them if they belong to this version
     if (msg.id && selectedVersion.childMessageIds.includes(msg.id)) {
+      console.log('Restoring message:', msg.id);
       return {
         ...msg,
         display: true, // Make sure they're visible
       };
     } else {
       // Hide messages that don't belong to this version
+      if (msg.display !== false) {
+        console.log('Hiding message:', msg.id);
+      }
       return {
         ...msg,
         display: false,
       };
     }
   });
+  
+  console.log('Restored messages, visible count:', updatedMessages.filter(m => m.display !== false).length);
+  return updatedMessages;
 }
 
 /**

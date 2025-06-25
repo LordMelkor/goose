@@ -579,8 +579,12 @@ export function useMessageStream({
         .filter(msg => msg.id)
         .map(msg => msg.id!);
       
+      console.log('Editing message:', messageId, 'with downstream messages:', downstreamMessageIds);
+      
       // Create new version of the message with downstream tracking
       const updatedMessage = createNewVersion(messageToEdit, newContent, downstreamMessageIds);
+      
+      console.log('Created message with versions:', updatedMessage.versions?.length, 'currentIndex:', updatedMessage.currentVersionIndex);
       
       // Hide downstream messages
       const messagesWithHiddenDownstream = hideDownstreamMessages(messageId, currentMessages);
@@ -590,19 +594,21 @@ export function useMessageStream({
         index === messageIndex ? updatedMessage : msg
       );
       
-      // Update state
+      // Update state first
       setMessages(updatedMessages);
       
       // Update active version path for the new version
       const newActivePath = computeActiveVersionPath(updatedMessages, messageId, updatedMessage.currentVersionIndex);
       setActiveVersionPath(newActivePath);
       
-      console.log('Created new version for message:', messageId);
-      console.log('Downstream messages tracked:', downstreamMessageIds);
+      console.log('Updated messages count:', updatedMessages.length);
       console.log('New active path:', newActivePath);
+      console.log('Sending request with', updatedMessages.filter(m => m.display !== false).length, 'visible messages');
       
       // Trigger new AI response by sending the updated messages
-      await sendRequest(updatedMessages);
+      // Only send messages that should be visible to the AI
+      const messagesToSend = updatedMessages.filter(msg => msg.display !== false);
+      await sendRequest(messagesToSend);
     },
     [sendRequest, setMessages]
   );
@@ -619,6 +625,15 @@ export function useMessageStream({
       }
 
       const messageToSwitch = currentMessages[messageIndex];
+      
+      // Validate version index
+      if (!messageToSwitch.versions || versionIndex < 0 || versionIndex >= messageToSwitch.versions.length) {
+        console.error('Invalid version index:', versionIndex, 'for message with', messageToSwitch.versions?.length || 0, 'versions');
+        return;
+      }
+      
+      console.log('Switching message', messageId, 'to version', versionIndex, 'of', messageToSwitch.versions.length);
+      
       const updatedMessage = switchVersion(messageToSwitch, versionIndex);
       
       // Restore/hide messages based on the selected version
@@ -638,7 +653,9 @@ export function useMessageStream({
       
       console.log('Switched to version:', versionIndex, 'for message:', messageId);
       console.log('Updated message currentVersionIndex:', updatedMessage.currentVersionIndex);
+      console.log('Message versions length:', updatedMessage.versions?.length);
       console.log('New active path:', newActivePath);
+      console.log('Visible messages:', updatedMessages.filter(m => m.display !== false).length);
     },
     [setMessages]
   );
