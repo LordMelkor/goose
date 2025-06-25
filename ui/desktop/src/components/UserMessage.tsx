@@ -11,9 +11,36 @@ import Edit from './icons/Edit';
 import VersionNavigator from './VersionNavigator';
 import { hasMultipleVersions } from '../utils/messageVersionUtils';
 
+/**
+ * UserMessage Component with Edit Functionality
+ * 
+ * This component renders user messages in the chat interface with support for
+ * in-place editing and version navigation. It provides a rich editing experience
+ * with keyboard shortcuts and accessibility features.
+ * 
+ * Features:
+ * - Edit icon appears on hover
+ * - In-place editing with textarea
+ * - Keyboard shortcuts (Enter to save, Escape to cancel, Shift+Enter for newlines)
+ * - Version navigator for messages with multiple versions
+ * - Full accessibility support with ARIA labels and focus management
+ * 
+ * @example
+ * ```tsx
+ * <UserMessage 
+ *   message={message}
+ *   onEditMessage={(id, content) => editMessage(id, content)}
+ *   onSwitchVersion={(id, index) => switchVersion(id, index)}
+ * />
+ * ```
+ */
+
 interface UserMessageProps {
+  /** The message to display */
   message: Message;
+  /** Callback fired when user saves an edit */
   onEditMessage?: (messageId: string, newContent: MessageContent[]) => void;
+  /** Callback fired when user switches to a different version */
   onSwitchVersion?: (messageId: string, versionIndex: number) => void;
 }
 
@@ -43,7 +70,7 @@ export default function UserMessage({ message, onEditMessage, onSwitchVersion }:
     setIsEditing(true);
   }, [displayText]);
 
-  // Handle save edit
+  // Handle save edit - creates new version and triggers AI response
   const handleSaveEdit = useCallback(() => {
     if (onEditMessage && message.id && editText.trim() !== displayText) {
       const newContent: MessageContent[] = [
@@ -57,25 +84,27 @@ export default function UserMessage({ message, onEditMessage, onSwitchVersion }:
     setIsEditing(false);
   }, [onEditMessage, message.id, editText, displayText]);
 
-  // Handle cancel edit
+  // Handle cancel edit - discards changes and exits edit mode
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
     setEditText('');
   }, []);
 
-  // Handle version change
+  // Handle version change - switches to different version of message
   const handleVersionChange = useCallback((versionIndex: number) => {
     if (onSwitchVersion && message.id) {
       onSwitchVersion(message.id, versionIndex);
     }
   }, [onSwitchVersion, message.id]);
 
-  // Handle textarea key events
+  // Handle textarea key events for keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      // Enter without Shift = save edit
       e.preventDefault();
       handleSaveEdit();
     } else if (e.key === 'Escape') {
+      // Escape = cancel edit
       e.preventDefault();
       handleCancelEdit();
     } else if (e.key === 'Tab') {
@@ -84,7 +113,7 @@ export default function UserMessage({ message, onEditMessage, onSwitchVersion }:
     }
   }, [handleSaveEdit, handleCancelEdit]);
 
-  // Handle edit button key events
+  // Handle edit button key events for accessibility
   const handleEditButtonKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();

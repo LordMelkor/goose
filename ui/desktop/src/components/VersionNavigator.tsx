@@ -2,10 +2,38 @@ import React from 'react';
 import { ChevronLeft } from './icons/ChevronLeft';
 import { ChevronRight } from './icons/ChevronRight';
 
+/**
+ * VersionNavigator Component
+ * 
+ * A navigation control for switching between different versions of an edited message.
+ * Displays the current version number and total versions in the format "< n / total >"
+ * with clickable arrows to navigate between versions.
+ * 
+ * Features:
+ * - Previous/Next navigation buttons with chevron icons
+ * - Automatic disabling of buttons at boundaries (first/last version)
+ * - Keyboard navigation support (Enter/Space to activate)
+ * - Full accessibility with ARIA labels and proper focus management
+ * - Responsive design that works with different themes
+ * 
+ * @example
+ * ```tsx
+ * <VersionNavigator
+ *   currentVersion={2}
+ *   totalVersions={3}
+ *   onVersionChange={(index) => switchToVersion(index)}
+ * />
+ * ```
+ */
+
 interface VersionNavigatorProps {
+  /** Current version number (1-based) */
   currentVersion: number;
+  /** Total number of versions available */
   totalVersions: number;
+  /** Callback fired when user navigates to a different version (0-based index) */
   onVersionChange: (versionIndex: number) => void;
+  /** Additional CSS classes to apply */
   className?: string;
 }
 
@@ -15,22 +43,26 @@ export default function VersionNavigator({
   onVersionChange,
   className = '',
 }: VersionNavigatorProps) {
-  const currentIndex = currentVersion - 1; // Convert to 0-based index
+  // Convert 1-based version to 0-based index for internal logic
+  const currentIndex = currentVersion - 1;
   const canGoPrevious = currentIndex > 0;
   const canGoNext = currentIndex < totalVersions - 1;
 
+  // Handle previous version navigation
   const handlePrevious = () => {
     if (canGoPrevious) {
       onVersionChange(currentIndex - 1);
     }
   };
 
+  // Handle next version navigation
   const handleNext = () => {
     if (canGoNext) {
       onVersionChange(currentIndex + 1);
     }
   };
 
+  // Handle keyboard events for accessibility
   const handleKeyDown = (e: React.KeyboardEvent, action: () => void) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
