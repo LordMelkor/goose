@@ -8,13 +8,16 @@ import { Message, getTextContent, MessageContent } from '../types/message';
 import MessageCopyLink from './MessageCopyLink';
 import { formatMessageTimestamp } from '../utils/timeUtils';
 import Edit from './icons/Edit';
+import VersionNavigator from './VersionNavigator';
+import { hasMultipleVersions } from '../utils/messageVersionUtils';
 
 interface UserMessageProps {
   message: Message;
   onEditMessage?: (messageId: string, newContent: MessageContent[]) => void;
+  onSwitchVersion?: (messageId: string, versionIndex: number) => void;
 }
 
-export default function UserMessage({ message, onEditMessage }: UserMessageProps) {
+export default function UserMessage({ message, onEditMessage, onSwitchVersion }: UserMessageProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
@@ -59,6 +62,13 @@ export default function UserMessage({ message, onEditMessage }: UserMessageProps
     setIsEditing(false);
     setEditText('');
   }, []);
+
+  // Handle version change
+  const handleVersionChange = useCallback((versionIndex: number) => {
+    if (onSwitchVersion && message.id) {
+      onSwitchVersion(message.id, versionIndex);
+    }
+  }, [onSwitchVersion, message.id]);
 
   // Handle textarea key events
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -119,6 +129,18 @@ export default function UserMessage({ message, onEditMessage }: UserMessageProps
                   {imagePaths.map((imagePath, index) => (
                     <ImagePreview key={index} src={imagePath} alt={`Pasted image ${index + 1}`} />
                   ))}
+                </div>
+              )}
+
+              {/* Version Navigator */}
+              {hasMultipleVersions(message) && (
+                <div className="flex justify-end mt-1">
+                  <VersionNavigator
+                    currentVersion={(message.currentVersionIndex || 0) + 1}
+                    totalVersions={message.versions?.length || 1}
+                    onVersionChange={handleVersionChange}
+                    className="text-xs"
+                  />
                 </div>
               )}
 

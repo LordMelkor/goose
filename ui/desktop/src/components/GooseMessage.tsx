@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import LinkPreview from './LinkPreview';
 import ImagePreview from './ImagePreview';
 import GooseResponseForm from './GooseResponseForm';
@@ -18,6 +18,8 @@ import {
 import ToolCallConfirmation from './ToolCallConfirmation';
 import MessageCopyLink from './MessageCopyLink';
 import { NotificationEvent } from '../hooks/useMessageStream';
+import VersionNavigator from './VersionNavigator';
+import { hasMultipleVersions } from '../utils/messageVersionUtils';
 
 interface GooseMessageProps {
   // messages up to this index are presumed to be "history" from a resumed session, this is used to track older tool confirmation requests
@@ -29,6 +31,7 @@ interface GooseMessageProps {
   toolCallNotifications: Map<string, NotificationEvent[]>;
   append: (value: string) => void;
   appendMessage: (message: Message) => void;
+  onSwitchVersion?: (messageId: string, versionIndex: number) => void;
 }
 
 export default function GooseMessage({
@@ -39,6 +42,7 @@ export default function GooseMessage({
   toolCallNotifications,
   append,
   appendMessage,
+  onSwitchVersion,
 }: GooseMessageProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -86,6 +90,13 @@ export default function GooseMessage({
 
   const toolConfirmationContent = getToolConfirmationContent(message);
   const hasToolConfirmation = toolConfirmationContent !== undefined;
+
+  // Handle version change
+  const handleVersionChange = useCallback((versionIndex: number) => {
+    if (onSwitchVersion && message.id) {
+      onSwitchVersion(message.id, versionIndex);
+    }
+  }, [onSwitchVersion, message.id]);
 
   // Find tool responses that correspond to the tool requests in this message
   const toolResponsesMap = useMemo(() => {
@@ -157,6 +168,18 @@ export default function GooseMessage({
                 {imagePaths.map((imagePath, index) => (
                   <ImagePreview key={index} src={imagePath} alt={`Image ${index + 1}`} />
                 ))}
+              </div>
+            )}
+
+            {/* Version Navigator */}
+            {hasMultipleVersions(message) && (
+              <div className="flex justify-start mt-1">
+                <VersionNavigator
+                  currentVersion={(message.currentVersionIndex || 0) + 1}
+                  totalVersions={message.versions?.length || 1}
+                  onVersionChange={handleVersionChange}
+                  className="text-xs"
+                />
               </div>
             )}
 

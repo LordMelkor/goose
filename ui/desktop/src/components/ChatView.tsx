@@ -623,7 +623,11 @@ function ChatContent({
                             contextType={getContextHandlerType(message)}
                           />
                         ) : (
-                          <UserMessage message={message} onEditMessage={editMessage} />
+                          <UserMessage 
+                            message={message} 
+                            onEditMessage={editMessage} 
+                            onSwitchVersion={switchMessageVersion}
+                          />
                         )}
                       </>
                     ) : (
@@ -648,6 +652,7 @@ function ChatContent({
                               setMessages(updatedMessages);
                             }}
                             toolCallNotifications={toolCallNotifications}
+                            onSwitchVersion={switchMessageVersion}
                           />
                         )}
                       </>
