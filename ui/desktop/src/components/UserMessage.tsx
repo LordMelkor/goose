@@ -92,10 +92,16 @@ export default function UserMessage({ message, onEditMessage, onSwitchVersion }:
 
   // Handle version change - switches to different version of message
   const handleVersionChange = useCallback((versionIndex: number) => {
+    console.log('VersionNavigator: handleVersionChange called with versionIndex:', versionIndex);
+    console.log('Message ID:', message.id, 'Current versions:', message.versions?.length);
+    console.log('Current currentVersionIndex:', message.currentVersionIndex);
+    
     if (onSwitchVersion && message.id) {
       onSwitchVersion(message.id, versionIndex);
+    } else {
+      console.error('Cannot switch version: missing onSwitchVersion or message.id');
     }
-  }, [onSwitchVersion, message.id]);
+  }, [onSwitchVersion, message.id, message.versions?.length, message.currentVersionIndex]);
 
   // Handle textarea key events for keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -185,6 +191,10 @@ export default function UserMessage({ message, onEditMessage, onSwitchVersion }:
                     onVersionChange={handleVersionChange}
                     className="text-xs"
                   />
+                  {/* Debug info */}
+                  <div className="ml-2 text-xs text-gray-500">
+                    Debug: idx={message.currentVersionIndex}, vers={message.versions?.length}
+                  </div>
                 </div>
               )}
 

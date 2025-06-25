@@ -59,6 +59,11 @@ export function createNewVersion(
   newContent: MessageContent[], 
   downstreamMessageIds: string[] = []
 ): Message {
+  console.log('=== createNewVersion START ===');
+  console.log('Message ID:', message.id);
+  console.log('Existing versions:', message.versions?.length || 0);
+  console.log('Downstream message IDs to track:', downstreamMessageIds);
+  
   const currentContent = message.content;
   const currentTimestamp = message.created;
   
@@ -85,6 +90,11 @@ export function createNewVersion(
     versions: message.versions ? [...message.versions, newVersion] : [firstVersion, newVersion],
     currentVersionIndex: message.versions ? message.versions.length : 1, // Fixed: length gives us the new index
   };
+
+  console.log('Created message with versions:', updatedMessage.versions?.length);
+  console.log('Version 0 (original) childMessageIds:', updatedMessage.versions?.[0]?.childMessageIds);
+  console.log('New currentVersionIndex:', updatedMessage.currentVersionIndex);
+  console.log('=== createNewVersion END ===');
 
   return updatedMessage;
 }
@@ -283,6 +293,10 @@ export function restoreMessagesForVersion(
   versionIndex: number,
   messages: Message[]
 ): Message[] {
+  console.log('=== restoreMessagesForVersion START ===');
+  console.log('MessageId:', messageId, 'VersionIndex:', versionIndex);
+  console.log('Total messages:', messages.length);
+  
   const messageIndex = messages.findIndex(msg => msg.id === messageId);
   if (messageIndex === -1) {
     console.warn('Message not found for restoreMessagesForVersion:', messageId);
@@ -290,13 +304,17 @@ export function restoreMessagesForVersion(
   }
 
   const message = messages[messageIndex];
+  console.log('Found message at index:', messageIndex);
+  console.log('Message versions:', message.versions?.length);
+  
   if (!message.versions || versionIndex < 0 || versionIndex >= message.versions.length) {
     console.warn('Invalid version index for restoreMessagesForVersion:', versionIndex, 'available versions:', message.versions?.length || 0);
     return messages;
   }
 
   const selectedVersion = message.versions[versionIndex];
-  console.log('Restoring messages for version', versionIndex, 'with child messages:', selectedVersion.childMessageIds);
+  console.log('Selected version:', versionIndex, 'with child messages:', selectedVersion.childMessageIds);
+  console.log('Messages after edited message (index > ' + messageIndex + '):');
   
   const updatedMessages = messages.map((msg, index) => {
     // Don't modify messages before the edited message
@@ -304,9 +322,11 @@ export function restoreMessagesForVersion(
       return msg;
     }
     
+    console.log(`  Message ${index}: id=${msg.id}, currentDisplay=${msg.display}`);
+    
     // For messages after the edited message, show them if they belong to this version
     if (msg.id && selectedVersion.childMessageIds.includes(msg.id)) {
-      console.log('Restoring message:', msg.id);
+      console.log(`    -> RESTORING message ${msg.id} (setting display=true)`);
       return {
         ...msg,
         display: true, // Make sure they're visible
@@ -314,7 +334,7 @@ export function restoreMessagesForVersion(
     } else {
       // Hide messages that don't belong to this version
       if (msg.display !== false) {
-        console.log('Hiding message:', msg.id);
+        console.log(`    -> HIDING message ${msg.id} (setting display=false)`);
       }
       return {
         ...msg,
@@ -323,7 +343,9 @@ export function restoreMessagesForVersion(
     }
   });
   
-  console.log('Restored messages, visible count:', updatedMessages.filter(m => m.display !== false).length);
+  const visibleCount = updatedMessages.filter(m => m.display !== false).length;
+  console.log('Restored messages, visible count:', visibleCount);
+  console.log('=== restoreMessagesForVersion END ===');
   return updatedMessages;
 }
 

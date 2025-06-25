@@ -48,17 +48,31 @@ export default function VersionNavigator({
   const canGoPrevious = currentIndex > 0;
   const canGoNext = currentIndex < totalVersions - 1;
 
+  console.log('VersionNavigator render:', {
+    currentVersion,
+    totalVersions,
+    currentIndex,
+    canGoPrevious,
+    canGoNext
+  });
+
   // Handle previous version navigation
   const handlePrevious = () => {
+    console.log('VersionNavigator: handlePrevious clicked, canGoPrevious:', canGoPrevious);
     if (canGoPrevious) {
-      onVersionChange(currentIndex - 1);
+      const newIndex = currentIndex - 1;
+      console.log('VersionNavigator: calling onVersionChange with index:', newIndex);
+      onVersionChange(newIndex);
     }
   };
 
   // Handle next version navigation
   const handleNext = () => {
+    console.log('VersionNavigator: handleNext clicked, canGoNext:', canGoNext);
     if (canGoNext) {
-      onVersionChange(currentIndex + 1);
+      const newIndex = currentIndex + 1;
+      console.log('VersionNavigator: calling onVersionChange with index:', newIndex);
+      onVersionChange(newIndex);
     }
   };
 
