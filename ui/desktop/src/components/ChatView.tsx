@@ -160,6 +160,9 @@ function ChatContent({
     updateMessageStreamBody,
     notifications,
     currentModelInfo,
+    editMessage,
+    switchMessageVersion,
+    activeVersionPath,
   } = useMessageStream({
     api: getApiUrl('/reply'),
     initialMessages: chat.messages,
