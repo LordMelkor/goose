@@ -61,21 +61,19 @@ export const ResponseStylesSection = () => {
         </div>
 
         {/* Extension Names Toggle */}
-        <div className="mt-6 pt-6 border-t border-borderSubtle">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-textStandard font-medium">Show Extension Names</h3>
-              <p className="text-xs text-textSubtle max-w-md mt-1">
-                Display extension names in tool call banners (e.g., "[Extension: developer] writing file.py")
-              </p>
-            </div>
-            <div className="flex items-center">
-              <Switch
-                checked={showExtensionNames}
-                onCheckedChange={handleShowExtensionNamesToggle}
-                variant="mono"
-              />
-            </div>
+        <div className="flex items-center justify-between mt-6">
+          <div>
+            <h3 className="text-textStandard">Show Extension Names</h3>
+            <p className="text-xs text-textSubtle max-w-md mt-[2px]">
+              Display extension names in tool call banners (e.g., "[Extension: developer] writing file.py")
+            </p>
+          </div>
+          <div className="flex items-center">
+            <Switch
+              checked={showExtensionNames}
+              onCheckedChange={handleShowExtensionNamesToggle}
+              variant="mono"
+            />
           </div>
         </div>
       </div>
