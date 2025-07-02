@@ -303,7 +303,7 @@ function ToolCallView({
 
       default: {
         // Fallback to the old generic approach: ToolName + CompactArguments
-        // This ensures tools like repomix work without explicit handling
+        // This ensures any MCP tool works without explicit handling
         const toolDisplayName = snakeToTitleCase(toolName);
         const entries = Object.entries(args);
         
