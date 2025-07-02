@@ -4,7 +4,7 @@ import { Switch } from '../../ui/switch';
 
 export const ResponseStylesSection = () => {
   const [currentStyle, setCurrentStyle] = useState('concise');
-  const [showExtensionNames, setShowExtensionNames] = useState(true);
+  const [showExtensionNames, setShowExtensionNames] = useState(false);
 
   useEffect(() => {
     const savedStyle = localStorage.getItem('response_style');
@@ -24,7 +24,7 @@ export const ResponseStylesSection = () => {
   // Load show extension names setting
   useEffect(() => {
     const stored = localStorage.getItem('show_extension_names');
-    setShowExtensionNames(stored !== 'false');
+    setShowExtensionNames(stored === 'true');
   }, []);
 
   const handleStyleChange = async (newStyle: string) => {

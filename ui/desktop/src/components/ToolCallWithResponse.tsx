@@ -172,8 +172,8 @@ function ToolCallView({
     const toolName = toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2);
     const extensionName = toolCall.name.substring(0, toolCall.name.lastIndexOf('__'));
     
-    // Check if user wants to show extension names (default: true for now, will add setting later)
-    const showExtensionNames = localStorage.getItem('show_extension_names') !== 'false';
+    // Check if user wants to show extension names (default: false)
+    const showExtensionNames = localStorage.getItem('show_extension_names') === 'true';
 
     // Helper function to get string value safely
     const getStringValue = (value: ToolCallArgumentValue): string => {
@@ -343,7 +343,7 @@ function ToolCallView({
               }
               // Fallback to the original tool name formatting with extension prefix
               const extensionName = toolCall.name.substring(0, toolCall.name.lastIndexOf('__'));
-              const showExtensionNames = localStorage.getItem('show_extension_names') !== 'false';
+              const showExtensionNames = localStorage.getItem('show_extension_names') === 'true';
               const extensionPrefix = (showExtensionNames && extensionName) ? `[Extension: ${extensionName}] ` : '';
               return `${extensionPrefix}${snakeToTitleCase(toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2))}`;
             })()}
