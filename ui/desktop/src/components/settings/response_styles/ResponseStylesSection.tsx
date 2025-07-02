@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { all_response_styles, ResponseStyleSelectionItem } from './ResponseStyleSelectionItem';
 import { Switch } from '../../ui/switch';
+import { getLocalStorageBoolean, setLocalStorageBoolean, getLocalStorageItem, setLocalStorageItem } from '../../../utils/localStorage';
 
 export const ResponseStylesSection = () => {
   const [currentStyle, setCurrentStyle] = useState('concise');
   const [showExtensionNames, setShowExtensionNames] = useState(false);
 
   useEffect(() => {
-    const savedStyle = localStorage.getItem('response_style');
+    const savedStyle = getLocalStorageItem('response_style', 'concise');
     if (savedStyle) {
       try {
         setCurrentStyle(savedStyle);
@@ -16,27 +17,25 @@ export const ResponseStylesSection = () => {
       }
     } else {
       // Set default to concise for new users
-      localStorage.setItem('response_style', 'concise');
+      setLocalStorageItem('response_style', 'concise');
       setCurrentStyle('concise');
     }
   }, []);
 
   // Load show extension names setting
   useEffect(() => {
-    const stored = localStorage.getItem('show_extension_names');
-    setShowExtensionNames(stored === 'true');
+    const showNames = getLocalStorageBoolean('show_extension_names', false);
+    setShowExtensionNames(showNames);
   }, []);
 
   const handleStyleChange = async (newStyle: string) => {
     setCurrentStyle(newStyle);
-    localStorage.setItem('response_style', newStyle);
+    setLocalStorageItem('response_style', newStyle);
   };
 
   const handleShowExtensionNamesToggle = (checked: boolean) => {
     setShowExtensionNames(checked);
-    localStorage.setItem('show_extension_names', String(checked));
-    // Trigger storage event for other components
-    window.dispatchEvent(new CustomEvent('storage'));
+    setLocalStorageBoolean('show_extension_names', checked);
   };
 
   return (

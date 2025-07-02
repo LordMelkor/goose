@@ -7,6 +7,7 @@ import { snakeToTitleCase } from '../utils';
 import Dot, { LoadingStatus } from './ui/Dot';
 import Expand from './ui/Expand';
 import { NotificationEvent } from '../hooks/useMessageStream';
+import { getLocalStorageBoolean } from '../utils/localStorage';
 
 interface ToolCallWithResponseProps {
   isCancelledMessage: boolean;
@@ -173,7 +174,7 @@ function ToolCallView({
     const extensionName = toolCall.name.substring(0, toolCall.name.lastIndexOf('__'));
     
     // Check if user wants to show extension names (default: false)
-    const showExtensionNames = localStorage.getItem('show_extension_names') === 'true';
+    const showExtensionNames = getLocalStorageBoolean('show_extension_names', false);
 
     // Helper function to get string value safely
     const getStringValue = (value: ToolCallArgumentValue): string => {
@@ -343,7 +344,7 @@ function ToolCallView({
               }
               // Fallback to the original tool name formatting with extension prefix
               const extensionName = toolCall.name.substring(0, toolCall.name.lastIndexOf('__'));
-              const showExtensionNames = localStorage.getItem('show_extension_names') === 'true';
+              const showExtensionNames = getLocalStorageBoolean('show_extension_names', false);
               const extensionPrefix = (showExtensionNames && extensionName) ? `[Extension: ${extensionName}] ` : '';
               return `${extensionPrefix}${snakeToTitleCase(toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2))}`;
             })()}
