@@ -7,7 +7,6 @@ import { snakeToTitleCase } from '../utils';
 import Dot, { LoadingStatus } from './ui/Dot';
 import Expand from './ui/Expand';
 import { NotificationEvent } from '../hooks/useMessageStream';
-import { getLocalStorageBoolean } from '../utils/localStorage';
 
 interface ToolCallWithResponseProps {
   isCancelledMessage: boolean;
@@ -171,10 +170,6 @@ function ToolCallView({
   const getToolDescription = () => {
     const args = toolCall.arguments as Record<string, ToolCallArgumentValue>;
     const toolName = toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2);
-    const extensionName = toolCall.name.substring(0, toolCall.name.lastIndexOf('__'));
-    
-    // Check if user wants to show extension names (default: false)
-    const showExtensionNames = getLocalStorageBoolean('show_extension_names', false);
 
     // Helper function to get string value safely
     const getStringValue = (value: ToolCallArgumentValue): string => {
@@ -186,41 +181,35 @@ function ToolCallView({
       return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
     };
 
-    // Helper function to create extension prefix
-    const getExtensionPrefix = (): string => {
-      if (!showExtensionNames || !extensionName) return '';
-      return `[Extension: ${extensionName}] `;
-    };
-
     // Generate descriptive text based on tool type
     switch (toolName) {
       case 'text_editor':
         if (args.command === 'write' && args.path) {
-          return `${getExtensionPrefix()}writing ${truncate(getStringValue(args.path))}`;
+          return `writing ${truncate(getStringValue(args.path))}`;
         }
         if (args.command === 'view' && args.path) {
-          return `${getExtensionPrefix()}reading ${truncate(getStringValue(args.path))}`;
+          return `reading ${truncate(getStringValue(args.path))}`;
         }
         if (args.command === 'str_replace' && args.path) {
-          return `${getExtensionPrefix()}editing ${truncate(getStringValue(args.path))}`;
+          return `editing ${truncate(getStringValue(args.path))}`;
         }
         if (args.command && args.path) {
-          return `${getExtensionPrefix()}${getStringValue(args.command)} ${truncate(getStringValue(args.path))}`;
+          return `${getStringValue(args.command)} ${truncate(getStringValue(args.path))}`;
         }
         break;
 
       case 'shell':
         if (args.command) {
-          return `${getExtensionPrefix()}running ${truncate(getStringValue(args.command))}`;
+          return `running ${truncate(getStringValue(args.command))}`;
         }
         break;
 
       case 'search':
         if (args.name) {
-          return `${getExtensionPrefix()}searching for "${truncate(getStringValue(args.name))}"`;
+          return `searching for "${truncate(getStringValue(args.name))}"`;
         }
         if (args.mimeType) {
-          return `${getExtensionPrefix()}searching for ${getStringValue(args.mimeType)} files`;
+          return `searching for ${getStringValue(args.mimeType)} files`;
         }
         break;
 
@@ -228,23 +217,23 @@ function ToolCallView({
         if (args.uri) {
           const uri = getStringValue(args.uri);
           const fileId = uri.replace('gdrive:///', '');
-          return `${getExtensionPrefix()}reading file ${truncate(fileId)}`;
+          return `reading file ${truncate(fileId)}`;
         }
         if (args.url) {
-          return `${getExtensionPrefix()}reading ${truncate(getStringValue(args.url))}`;
+          return `reading ${truncate(getStringValue(args.url))}`;
         }
         break;
       }
 
       case 'create_file':
         if (args.name) {
-          return `${getExtensionPrefix()}creating ${truncate(getStringValue(args.name))}`;
+          return `creating ${truncate(getStringValue(args.name))}`;
         }
         break;
 
       case 'update_file':
         if (args.fileId) {
-          return `${getExtensionPrefix()}updating file ${truncate(getStringValue(args.fileId))}`;
+          return `updating file ${truncate(getStringValue(args.fileId))}`;
         }
         break;
 
@@ -252,7 +241,7 @@ function ToolCallView({
         if (args.operation && args.spreadsheetId) {
           const operation = getStringValue(args.operation);
           const sheetId = truncate(getStringValue(args.spreadsheetId));
-          return `${getExtensionPrefix()}${operation} in sheet ${sheetId}`;
+          return `${operation} in sheet ${sheetId}`;
         }
         break;
       }
@@ -261,38 +250,38 @@ function ToolCallView({
         if (args.operation && args.documentId) {
           const operation = getStringValue(args.operation);
           const docId = truncate(getStringValue(args.documentId));
-          return `${getExtensionPrefix()}${operation} in document ${docId}`;
+          return `${operation} in document ${docId}`;
         }
         break;
       }
 
       case 'web_scrape':
         if (args.url) {
-          return `${getExtensionPrefix()}scraping ${truncate(getStringValue(args.url))}`;
+          return `scraping ${truncate(getStringValue(args.url))}`;
         }
         break;
 
       case 'remember_memory':
         if (args.category && args.data) {
-          return `${getExtensionPrefix()}storing ${getStringValue(args.category)}: ${truncate(getStringValue(args.data))}`;
+          return `storing ${getStringValue(args.category)}: ${truncate(getStringValue(args.data))}`;
         }
         break;
 
       case 'retrieve_memories':
         if (args.category) {
-          return `${getExtensionPrefix()}retrieving ${getStringValue(args.category)} memories`;
+          return `retrieving ${getStringValue(args.category)} memories`;
         }
         break;
 
       case 'screen_capture':
         if (args.window_title) {
-          return `${getExtensionPrefix()}capturing window "${truncate(getStringValue(args.window_title))}"`;
+          return `capturing window "${truncate(getStringValue(args.window_title))}"`;
         }
-        return `${getExtensionPrefix()}capturing screen`;
+        return `capturing screen`;
 
       case 'automation_script':
         if (args.language) {
-          return `${getExtensionPrefix()}running ${getStringValue(args.language)} script`;
+          return `running ${getStringValue(args.language)} script`;
         }
         break;
 
@@ -300,7 +289,7 @@ function ToolCallView({
         return 'final output';
 
       case 'computer_control':
-        return `${getExtensionPrefix()}poking around...`;
+        return `poking around...`;
 
       default: {
         // Fallback to the old generic approach: ToolName + CompactArguments
@@ -309,7 +298,7 @@ function ToolCallView({
         const entries = Object.entries(args);
         
         if (entries.length === 0) {
-          return `${getExtensionPrefix()}${toolDisplayName}`;
+          return `${toolDisplayName}`;
         }
 
         // For a single parameter, show key and truncated value (like the old system)
@@ -317,12 +306,12 @@ function ToolCallView({
           const [key, value] = entries[0];
           const stringValue = getStringValue(value);
           const truncatedValue = truncate(stringValue, 30);
-          return `${getExtensionPrefix()}${toolDisplayName} ${key}: ${truncatedValue}`;
+          return `${toolDisplayName} ${key}: ${truncatedValue}`;
         }
 
         // For multiple parameters, show tool name and keys
         const keys = entries.map(([key]) => key).join(', ');
-        return `${getExtensionPrefix()}${toolDisplayName} ${keys}`;
+        return `${toolDisplayName} ${keys}`;
       }
     }
 
@@ -342,11 +331,8 @@ function ToolCallView({
               if (description) {
                 return description;
               }
-              // Fallback to the original tool name formatting with extension prefix
-              const extensionName = toolCall.name.substring(0, toolCall.name.lastIndexOf('__'));
-              const showExtensionNames = getLocalStorageBoolean('show_extension_names', false);
-              const extensionPrefix = (showExtensionNames && extensionName) ? `[Extension: ${extensionName}] ` : '';
-              return `${extensionPrefix}${snakeToTitleCase(toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2))}`;
+              // Fallback to the original tool name formatting without extension prefix
+              return snakeToTitleCase(toolCall.name.substring(toolCall.name.lastIndexOf('__') + 2));
             })()}
           </span>
         </>
